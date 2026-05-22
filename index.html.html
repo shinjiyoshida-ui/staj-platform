@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STA 定着支援MVP</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0d1f2d;
+  --teal:   #0f9689;
+  --teal2:  #12b3a4;
+  --teal-bg:#e6f7f5;
+  --amber:  #e8940a;
+  --amber-bg:#fef3dc;
+  --red:    #d93b3b;
+  --red-bg: #fdeaea;
+  --green:  #1fa660;
+  --green-bg:#e4f7ee;
+  --slate:  #64748b;
+  --line:   #e4e9ee;
+  --bg:     #f4f7fa;
+  --card:   #ffffff;
+  --sw: 232px;
+  --r: 10px;
+  --rs: 7px;
+  --sh: 0 2px 8px rgba(13,31,45,.07);
+  --sh2: 0 6px 20px rgba(13,31,45,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);display:flex;height:100vh;overflow:hidden;font-size:13.5px}
+
+/* ── SIDEBAR ── */
+#sb{width:var(--sw);background:var(--ink);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sb-logo{padding:20px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.2}
+.sb-brand span{color:var(--teal2)}
+.sb-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:3px;letter-spacing:.03em}
+.sb-sec{padding:14px 8px 4px}
+.sb-lbl{font-size:9.5px;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.28);padding:0 8px;margin-bottom:4px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;color:rgba(255,255,255,.55);font-size:12.5px;font-weight:500;transition:all .15s;margin-bottom:1px;position:relative;user-select:none}
+.ni:hover{background:rgba(255,255,255,.06);color:#fff}
+.ni.on{background:rgba(15,150,137,.22);color:var(--teal2)}
+.ni.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--teal2);border-radius:0 2px 2px 0}
+.ni-ic{width:18px;text-align:center;font-size:14px}
+.ni-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+.ni-badge.am{background:var(--amber);color:var(--ink)}
+.sb-ft{margin-top:auto;padding:12px 8px;border-top:1px solid rgba(255,255,255,.08)}
+.u-row{display:flex;align-items:center;gap:9px;padding:6px 8px}
+.u-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+.u-nm{color:#fff;font-size:12px;font-weight:600}
+.u-rl{color:rgba(255,255,255,.38);font-size:10px}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:11px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.tb-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--ink)}
+.tb-sub{font-size:11px;color:var(--slate);margin-left:2px}
+.tb-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{padding:7px 13px;border-radius:var(--rs);font-size:12.5px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--teal);color:#fff}.btn-p:hover{background:#0b7d72}
+.btn-o{background:transparent;color:var(--ink);border:1.5px solid var(--line)}.btn-o:hover{border-color:#b0bec9;background:var(--bg)}
+.btn-r{background:var(--red-bg);color:var(--red);border:1.5px solid #f5c6c6}.btn-r:hover{background:#fbd8d8}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:18px 22px}
+.view{display:none}.view.on{display:block}
+
+/* ── SECTION HEADER ── */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--ink)}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--card);border-radius:var(--r);padding:14px 16px;border:1px solid var(--line);box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
+.kpi.teal::after{background:var(--teal)}.kpi.red::after{background:var(--red)}.kpi.am::after{background:var(--amber)}.kpi.gr::after{background:var(--green)}
+.kpi-lbl{font-size:10.5px;color:var(--slate);margin-bottom:6px;font-weight:500}
+.kpi-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--ink);line-height:1}
+.kpi-val.red{color:var(--red)}.kpi-val.am{color:var(--amber)}.kpi-val.gr{color:var(--green)}
+.kpi-ch{font-size:10.5px;color:var(--slate);margin-top:4px}
+.kpi-ch .up{color:var(--green)}.kpi-ch .dn{color:var(--red)}
+
+/* ── PANEL ── */
+.panel{background:var(--card);border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--sh);overflow:hidden;margin-bottom:14px}
+.ph{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ph-t{font-size:12.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
+.pb{padding:14px 16px}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:10.5px;font-weight:700;color:var(--slate);text-align:left;padding:8px 11px;background:var(--bg);border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:9px 11px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.dr:hover td{background:#f8fbff;cursor:pointer}
+.tbl tr.dr{transition:background .1s}
+
+/* ── BADGES ── */
+.bd{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.bd-r{background:var(--red-bg);color:#b91c1c}
+.bd-a{background:var(--amber-bg);color:#92400e}
+.bd-g{background:var(--green-bg);color:#166534}
+.bd-s{background:var(--bg);color:var(--slate)}
+.bd-t{background:var(--teal-bg);color:#0b7d72}
+
+/* ── SCORE BAR ── */
+.sb-wrap{display:flex;align-items:center;gap:7px}
+.sb-track{flex:1;height:5px;background:var(--line);border-radius:3px;overflow:hidden;min-width:60px}
+.sb-fill{height:100%;border-radius:3px;transition:width .5s}
+.sb-fill.hi{background:var(--teal)}.sb-fill.md{background:var(--amber)}.sb-fill.lo{background:var(--red)}
+.sb-txt{font-size:11.5px;font-weight:700;min-width:30px;text-align:right}
+.sb-txt.hi{color:var(--teal)}.sb-txt.md{color:var(--amber)}.sb-txt.lo{color:var(--red)}
+
+/* ── PERSON CELL ── */
+.pc{display:flex;align-items:center;gap:8px}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.pn{font-weight:600;color:var(--ink);font-size:12.5px;line-height:1.2}
+.ps{font-size:10.5px;color:var(--slate)}
+
+/* ── SEARCH BAR ── */
+.srch-row{display:flex;gap:7px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.srch-in{flex:1;min-width:160px;padding:7px 11px 7px 30px;border:1.5px solid var(--line);border-radius:var(--rs);font-size:12.5px;font-family:inherit;background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' fill='none' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8' stroke='%2394a3b8' stroke-width='2'/%3E%3Cpath d='m21 21-4.35-4.35' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 9px center no-repeat}
+.srch-in:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,150,137,.08)}
+.chip{padding:5px 11px;border-radius:20px;border:1.5px solid var(--line);font-size:11.5px;font-weight:600;cursor:pointer;color:var(--slate);background:var(--card);font-family:inherit;transition:all .15s;white-space:nowrap}
+.chip:hover{border-color:var(--teal);color:var(--teal)}
+.chip.on{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g31{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
+
+/* ── MODAL ── */
+.ov{display:none;position:fixed;inset:0;background:rgba(13,31,45,.45);z-index:100;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:var(--card);border-radius:14px;width:580px;max-height:82vh;overflow-y:auto;box-shadow:var(--sh2);animation:su .2s ease}
+.modal.sm{width:420px}
+@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.mh{padding:18px 22px 14px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between}
+.mh-t{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--ink)}
+.mc{padding:18px 22px}
+.m-close{background:var(--bg);border:none;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;color:var(--slate);display:flex;align-items:center;justify-content:center}
+
+/* ── FORM ── */
+.fg{margin-bottom:12px}
+.fl{font-size:11.5px;font-weight:700;color:var(--slate);margin-bottom:4px;display:block}
+.fc{width:100%;padding:7px 11px;border:1.5px solid var(--line);border-radius:var(--rs);font-size:12.5px;font-family:inherit;color:var(--ink);background:var(--card);transition:border-color .15s}
+.fc:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,150,137,.08)}
+textarea.fc{resize:vertical;min-height:72px}
+.fr{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--line);margin-bottom:14px}
+.tab{padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--slate);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--teal);border-bottom-color:var(--teal)}
+
+/* ── AI GUIDE ── */
+.ag-item{border:1px solid var(--line);border-radius:var(--rs);margin-bottom:8px;overflow:hidden}
+.ag-q{background:var(--bg);padding:8px 12px;font-size:12px;font-weight:600;color:var(--ink);display:flex;gap:7px;align-items:flex-start}
+.ag-num{background:var(--teal);color:#fff;font-size:9.5px;font-weight:700;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.ag-a{padding:7px 12px;font-size:12px;color:var(--slate);border-top:1px solid var(--line);font-style:italic}
+.ag-next{padding:5px 12px 8px;font-size:11px;color:var(--teal);line-height:1.5}
+
+/* ── SCORE GAUGE ── */
+.sg{display:flex;gap:8px;margin-bottom:14px}
+.sg-it{flex:1;background:var(--bg);border-radius:var(--rs);padding:10px 8px;text-align:center;border:1px solid var(--line)}
+.sg-lbl{font-size:9.5px;color:var(--slate);margin-bottom:3px}
+.sg-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--ink)}
+.sg-val.r{color:var(--red)}.sg-val.a{color:var(--amber)}.sg-val.g{color:var(--green)}
+
+/* ── TIMELINE ── */
+.tl{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:10px;padding-bottom:14px;position:relative}
+.tl-item::after{content:'';position:absolute;left:10px;top:22px;bottom:0;width:1px;background:var(--line)}
+.tl-item:last-child::after{display:none}
+.tl-dot{width:22px;height:22px;border-radius:50%;background:var(--teal-bg);border:2px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;position:relative;z-index:1}
+.tl-body{flex:1;padding-top:2px}
+.tl-t{font-size:12.5px;font-weight:700;color:var(--ink)}
+.tl-d{font-size:11.5px;color:var(--slate);margin-top:2px;line-height:1.5}
+.tl-time{font-size:10px;color:#aab;margin-top:2px}
+
+/* ── DONUT ── */
+.donut-row{display:flex;align-items:center;gap:16px}
+.leg{flex:1}
+.leg-it{display:flex;align-items:center;gap:7px;margin-bottom:7px;font-size:11.5px}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leg-lbl{color:var(--slate);flex:1}
+.leg-v{font-weight:700;color:var(--ink)}
+
+/* ── BARS CHART ── */
+.bc{display:flex;align-items:flex-end;gap:5px;height:72px;padding-bottom:18px;position:relative}
+.bc-it{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end}
+.bc-fill{width:100%;border-radius:3px 3px 0 0;background:var(--teal);opacity:.65;transition:all .4s}
+.bc-fill:hover{opacity:1}
+.bc-lbl{font-size:9px;color:var(--slate);white-space:nowrap}
+.bc-it.cur .bc-fill{opacity:1}
+.bc-it.cur .bc-lbl{color:var(--teal);font-weight:700}
+
+/* ── COMPANY CARD ── */
+.co-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.co-card{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s;box-shadow:var(--sh)}
+.co-card:hover{border-color:var(--teal);box-shadow:0 4px 14px rgba(15,150,137,.14);transform:translateY(-1px)}
+.co-card.alert{border-color:#f5c6c6}
+.co-nm{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.co-meta{font-size:10.5px;color:var(--slate);margin-bottom:10px}
+.co-stats{display:flex;gap:10px}
+.co-st{text-align:center;flex:1}
+.co-st-v{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--ink)}
+.co-st-l{font-size:9.5px;color:var(--slate)}
+
+/* ── MINI STAT ROW ── */
+.msr{display:flex;border:1px solid var(--line);border-radius:var(--rs);overflow:hidden;margin-bottom:14px;background:var(--card)}
+.mst{flex:1;padding:10px 8px;text-align:center;border-right:1px solid var(--line)}
+.mst:last-child{border-right:none}
+.mst-v{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--ink)}
+.mst-l{font-size:9.5px;color:var(--slate);margin-top:1px}
+
+/* ── ALERT NOTICE ── */
+.alert-box{border-radius:var(--rs);padding:10px 13px;margin-bottom:10px;font-size:12px;line-height:1.6;border-left:3px solid}
+.alert-box.am{background:var(--amber-bg);border-color:var(--amber);color:#7c3c0a}
+.alert-box.r{background:var(--red-bg);border-color:var(--red);color:#8b1a1a}
+.alert-box.t{background:var(--teal-bg);border-color:var(--teal);color:#0b5f56}
+
+/* ── VISA TAG ── */
+.vt{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700}
+.vt.danger{background:var(--red-bg);color:var(--red)}
+.vt.warn{background:var(--amber-bg);color:var(--amber)}
+.vt.ok{background:var(--green-bg);color:var(--green)}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:36px 20px;color:var(--slate)}
+.empty-ic{font-size:32px;margin-bottom:8px}
+.empty-t{font-size:13px;font-weight:600;color:var(--ink)}
+.empty-s{font-size:11.5px;margin-top:4px}
+
+/* ── SCROLL ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--ink);color:#fff;padding:9px 16px;border-radius:var(--rs);font-size:12.5px;font-weight:500;z-index:200;opacity:0;transform:translateY(6px);transition:all .22s;pointer-events:none;max-width:300px}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* ── HELPERS ── */
+.flex{display:flex}.ai{align-items:center}.jb{justify-content:space-between}.gap8{gap:8px}.gap4{gap:4px}.ml-a{margin-left:auto}
+.fw7{font-weight:700}.fs11{font-size:11px}.fs12{font-size:12px}.c-r{color:var(--red)}.c-a{color:var(--amber)}.c-g{color:var(--green)}.c-t{color:var(--teal)}.c-s{color:var(--slate)}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mb8{margin-bottom:8px}.mb4{margin-bottom:4px}
+input[type=date].fc{cursor:pointer}
+select.fc option{font-family:'Noto Sans JP',sans-serif}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sb">
+  <div class="sb-logo">
+    <div class="sb-brand">STA<span>Datch</span></div>
+    <div class="sb-sub">ST Agency Japan — 定着支援MVP</div>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-lbl">メイン</div>
+    <div class="ni on" data-v="dashboard"><span class="ni-ic">🏠</span>ダッシュボード</div>
+    <div class="ni" data-v="alerts" id="ni-alerts"><span class="ni-ic">🚨</span>アラート管理<span class="ni-badge" id="badge-alert">0</span></div>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-lbl">支援業務</div>
+    <div class="ni" data-v="workers"><span class="ni-ic">👥</span>技能者一覧</div>
+    <div class="ni" data-v="survey" id="ni-survey"><span class="ni-ic">📋</span>アンケート管理<span class="ni-badge am" id="badge-survey">0</span></div>
+    <div class="ni" data-v="interview"><span class="ni-ic">🤝</span>面談ガイド</div>
+    <div class="ni" data-v="records"><span class="ni-ic">📝</span>対応記録</div>
+    <div class="ni" data-v="companies"><span class="ni-ic">🏢</span>企業別状況</div>
+  </div>
+
+  <div class="sb-ft">
+    <div class="u-row">
+      <div class="u-av">吉</div>
+      <div><div class="u-nm">吉田（トゥーン）</div><div class="u-rl">就労支援事業部</div></div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <div class="topbar">
+    <div>
+      <span class="tb-title" id="tb-title">ダッシュボード</span>
+      <span class="tb-sub" id="tb-sub"></span>
+    </div>
+    <div class="tb-r" id="tb-actions"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- ════ DASHBOARD ════ -->
+    <div class="view on" id="view-dashboard">
+      <div class="kpi-row" id="kpi-row"></div>
+      <div class="g31">
+        <div>
+          <div class="panel">
+            <div class="ph"><span class="ph-t">🚨 優先対応リスト</span><button class="btn btn-o btn-sm" onclick="nav('alerts')">全て見る</button></div>
+            <div id="dash-alert-list"></div>
+          </div>
+          <div class="panel">
+            <div class="ph"><span class="ph-t">📈 スコア推移（全体平均）</span><span class="fs11 c-s">2026年</span></div>
+            <div class="pb"><div class="bc" id="trend-chart"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="ph"><span class="ph-t">📊 アラート内訳</span></div>
+            <div class="pb">
+              <div class="donut-row">
+                <svg width="68" height="68" viewBox="0 0 68 68"><circle cx="34" cy="34" r="26" fill="none" stroke="var(--line)" stroke-width="10"/><circle cx="34" cy="34" r="26" fill="none" stroke="var(--red)" stroke-width="10" id="d-p" stroke-dasharray="0 163" stroke-dashoffset="0" transform="rotate(-90 34 34)"/><circle cx="34" cy="34" r="26" fill="none" stroke="var(--amber)" stroke-width="10" id="d-n" stroke-dasharray="0 163" stroke-dashoffset="0" transform="rotate(-90 34 34)"/><circle cx="34" cy="34" r="26" fill="none" stroke="var(--green)" stroke-width="10" id="d-ok" stroke-dasharray="0 163" stroke-dashoffset="0" transform="rotate(-90 34 34)"/><text x="34" y="38" text-anchor="middle" font-size="12" font-weight="800" fill="var(--ink)" font-family="Syne" id="d-total">0</text></svg>
+                <div class="leg">
+                  <div class="leg-it"><div class="leg-dot" style="background:var(--red)"></div><span class="leg-lbl">優先アラート</span><span class="leg-v" id="leg-p">0</span></div>
+                  <div class="leg-it"><div class="leg-dot" style="background:var(--amber)"></div><span class="leg-lbl">通常アラート</span><span class="leg-v" id="leg-n">0</span></div>
+                  <div class="leg-it"><div class="leg-dot" style="background:var(--green)"></div><span class="leg-lbl">対応済</span><span class="leg-v" id="leg-ok">0</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="ph"><span class="ph-t">📌 課題カテゴリ上位</span></div>
+            <div class="pb" id="category-panel"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ ALERTS ════ -->
+    <div class="view" id="view-alerts">
+      <div class="srch-row">
+        <input class="srch-in" placeholder="名前・企業名で検索…" id="alert-search" oninput="renderAlerts()">
+        <button class="chip on" onclick="filterAlert(this,'all')">全て</button>
+        <button class="chip" onclick="filterAlert(this,'priority')">🔴 優先</button>
+        <button class="chip" onclick="filterAlert(this,'normal')">🟡 通常</button>
+        <button class="chip" onclick="filterAlert(this,'pending')">未対応のみ</button>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ph-t">🚨 アラート一覧</span><span class="fs11 c-s" id="alert-count-label"></span></div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>対象者</th><th>企業</th><th>国籍</th><th>アラート</th><th>総合スコア</th><th>先月比</th><th>AI深掘り</th><th>状況</th><th>操作</th></tr></thead><tbody id="alert-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ════ WORKERS ════ -->
+    <div class="view" id="view-workers">
+      <div class="srch-row">
+        <input class="srch-in" placeholder="名前・企業名・国籍で検索…" id="worker-search" oninput="renderWorkers()">
+        <button class="chip on" onclick="filterWorker(this,'all')">全て</button>
+        <button class="chip" onclick="filterWorker(this,'🇻🇳')">🇻🇳 ベトナム</button>
+        <button class="chip" onclick="filterWorker(this,'🇲🇲')">🇲🇲 ミャンマー</button>
+        <button class="chip" onclick="filterWorker(this,'🇮🇩')">🇮🇩 インドネシア</button>
+        <button class="chip" onclick="filterWorker(this,'🇵🇭')">🇵🇭 フィリピン</button>
+      </div>
+      <div class="msr" id="worker-msr"></div>
+      <div class="panel">
+        <div class="ph">
+          <span class="ph-t">👥 特定技能者一覧</span>
+          <button class="btn btn-p btn-sm" onclick="openModal('modal-add-worker')">＋ 新規登録</button>
+        </div>
+        <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>氏名</th><th>国籍</th><th>企業</th><th>入社日</th><th>在留期限</th><th>最新スコア</th><th>先月比</th><th>ステータス</th><th>操作</th></tr></thead><tbody id="worker-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ════ SURVEY ════ -->
+    <div class="view" id="view-survey">
+      <div class="msr" id="survey-msr"></div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><span class="ph-t">📋 アンケート回答一覧</span><button class="btn btn-p btn-sm" onclick="openModal('modal-add-score')">＋ スコア入力</button></div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>対象者</th><th>企業</th><th>月</th><th>睡眠</th><th>仕事</th><th>人間関係</th><th>生活</th><th>総合</th><th>アラート</th></tr></thead><tbody id="survey-tbody"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="ph-t">📊 4項目スコア（今月平均）</span></div>
+          <div class="pb" id="survey-avg-panel"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ INTERVIEW ════ -->
+    <div class="view" id="view-interview">
+      <div class="panel">
+        <div class="ph"><span class="ph-t">🤝 AI面談ガイド</span><span class="fs11 c-s">対象者を選択してガイドを表示</span></div>
+        <div class="pb">
+          <div class="fg">
+            <label class="fl">対象者を選択</label>
+            <select class="fc" id="itv-worker-sel" onchange="renderInterviewGuide()"><option value="">-- 選択してください --</option></select>
+          </div>
+          <div id="itv-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ RECORDS ════ -->
+    <div class="view" id="view-records">
+      <div class="sec-hd">
+        <span class="sec-title">📝 対応記録</span>
+        <button class="btn btn-p btn-sm" onclick="openModal('modal-add-record')">＋ 記録を追加</button>
+      </div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><span class="ph-t">記録一覧</span><span class="fs11 c-s" id="rec-count"></span></div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>日時</th><th>対象者</th><th>種別</th><th>内容（抜粋）</th><th>状況</th></tr></thead><tbody id="rec-tbody"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="ph-t">📅 タイムライン</span></div>
+          <div class="pb"><div class="tl" id="rec-timeline"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ COMPANIES ════ -->
+    <div class="view" id="view-companies">
+      <div class="sec-hd">
+        <span class="sec-title">🏢 企業別状況</span>
+        <button class="btn btn-p btn-sm" onclick="openModal('modal-add-company')">＋ 企業追加</button>
+      </div>
+      <div class="co-grid" id="co-grid"></div>
+    </div>
+
+  </div><!-- /content -->
+</div>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Worker detail -->
+<div class="ov" id="modal-worker-detail" onclick="closeModal('modal-worker-detail')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="mh"><div><div class="mh-t" id="wd-name"></div><div class="fs12 c-s mt8" id="wd-meta"></div></div><button class="m-close" onclick="closeModal('modal-worker-detail')">✕</button></div>
+    <div class="mc">
+      <div class="tabs"><div class="tab on" onclick="switchTab(this,'wd')">📊 スコア</div><div class="tab" onclick="switchTab(this,'wd')">📝 記録履歴</div></div>
+      <div class="sg" id="wd-gauge"></div>
+      <div class="alert-box am" id="wd-comment" style="display:none"></div>
+      <div id="wd-guide"></div>
+      <div class="flex gap8 mt12">
+        <button class="btn btn-p" onclick="closeModal('modal-worker-detail');openModal('modal-add-record')">📝 対応記録</button>
+        <button class="btn btn-o" onclick="openInterviewFor()">🤝 面談ガイド</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Worker -->
+<div class="ov" id="modal-add-worker" onclick="closeModal('modal-add-worker')">
+  <div class="modal sm" onclick="event.stopPropagation()">
+    <div class="mh"><div class="mh-t">👤 技能者を新規登録</div><button class="m-close" onclick="closeModal('modal-add-worker')">✕</button></div>
+    <div class="mc">
+      <div class="fg"><label class="fl">氏名（ローマ字）</label><input class="fc" id="nw-name" placeholder="NGUYEN TUAN ANH"></div>
+      <div class="fg"><label class="fl">国籍</label><select class="fc" id="nw-nat"><option value="🇻🇳 ベトナム">🇻🇳 ベトナム</option><option value="🇲🇲 ミャンマー">🇲🇲 ミャンマー</option><option value="🇮🇩 インドネシア">🇮🇩 インドネシア</option><option value="🇵🇭 フィリピン">🇵🇭 フィリピン</option><option value="🇨🇳 中国">🇨🇳 中国</option></select></div>
+      <div class="fg"><label class="fl">企業</label><select class="fc" id="nw-co"></select></div>
+      <div class="fg"><label class="fl">入社日</label><input class="fc" type="date" id="nw-join"></div>
+      <div class="fg"><label class="fl">在留期限</label><input class="fc" type="date" id="nw-visa"></div>
+      <div class="fr"><button class="btn btn-p" onclick="addWorker()">登録</button><button class="btn btn-o" onclick="closeModal('modal-add-worker')">キャンセル</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Score -->
+<div class="ov" id="modal-add-score" onclick="closeModal('modal-add-score')">
+  <div class="modal sm" onclick="event.stopPropagation()">
+    <div class="mh"><div class="mh-t">📊 スコアを入力</div><button class="m-close" onclick="closeModal('modal-add-score')">✕</button></div>
+    <div class="mc">
+      <div class="fg"><label class="fl">対象者</label><select class="fc" id="sc-worker"></select></div>
+      <div class="fg"><label class="fl">対象月</label><input class="fc" type="month" id="sc-month"></div>
+      <div class="fg"><label class="fl">😴 睡眠（1〜5）</label><input class="fc" type="number" min="1" max="5" id="sc-sleep" placeholder="3"></div>
+      <div class="fg"><label class="fl">💼 仕事（1〜5）</label><input class="fc" type="number" min="1" max="5" id="sc-work" placeholder="3"></div>
+      <div class="fg"><label class="fl">🤝 人間関係（1〜5）</label><input class="fc" type="number" min="1" max="5" id="sc-rel" placeholder="3"></div>
+      <div class="fg"><label class="fl">🏠 生活（1〜5）</label><input class="fc" type="number" min="1" max="5" id="sc-life" placeholder="3"></div>
+      <div class="fg"><label class="fl">コメント（任意）</label><textarea class="fc" id="sc-comment" placeholder="本人の声やメモを入力…"></textarea></div>
+      <div class="fr"><button class="btn btn-p" onclick="addScore()">保存</button><button class="btn btn-o" onclick="closeModal('modal-add-score')">キャンセル</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Record -->
+<div class="ov" id="modal-add-record" onclick="closeModal('modal-add-record')">
+  <div class="modal sm" onclick="event.stopPropagation()">
+    <div class="mh"><div class="mh-t">📝 対応記録を追加</div><button class="m-close" onclick="closeModal('modal-add-record')">✕</button></div>
+    <div class="mc">
+      <div class="fg"><label class="fl">対象者</label><select class="fc" id="rec-worker"></select></div>
+      <div class="fg"><label class="fl">対応種別</label><select class="fc" id="rec-type"><option>面談</option><option>電話</option><option>訪問</option><option>メール</option><option>企業連絡</option></select></div>
+      <div class="fg"><label class="fl">対応内容</label><textarea class="fc" id="rec-content" placeholder="確認内容・対応方針を記録…"></textarea></div>
+      <div class="fg"><label class="fl">状況</label><select class="fc" id="rec-status"><option>対応中</option><option>対応済み</option><option>未対応</option></select></div>
+      <div class="fr"><button class="btn btn-p" onclick="addRecord()">保存</button><button class="btn btn-o" onclick="closeModal('modal-add-record')">キャンセル</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Company -->
+<div class="ov" id="modal-add-company" onclick="closeModal('modal-add-company')">
+  <div class="modal sm" onclick="event.stopPropagation()">
+    <div class="mh"><div class="mh-t">🏢 企業を追加</div><button class="m-close" onclick="closeModal('modal-add-company')">✕</button></div>
+    <div class="mc">
+      <div class="fg"><label class="fl">企業名</label><input class="fc" id="co-name" placeholder="株式会社〇〇"></div>
+      <div class="fg"><label class="fl">業種</label><select class="fc" id="co-type"><option>🏥 介護</option><option>🏥 医療</option><option>🏭 製造</option><option>🍽 飲食</option><option>🛒 小売</option><option>🏗 建設</option><option>🌾 農業</option></select></div>
+      <div class="fg"><label class="fl">所在地</label><input class="fc" id="co-loc" placeholder="東京都〇〇区"></div>
+      <div class="fg"><label class="fl">担当者メール</label><input class="fc" id="co-email" placeholder="tantosha@example.com" type="email"></div>
+      <div class="fr"><button class="btn btn-p" onclick="addCompany()">追加</button><button class="btn btn-o" onclick="closeModal('modal-add-company')">キャンセル</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  DATA STORE
+// ══════════════════════════════════════
+let DB = {
+  companies: [
+    {id:'co1', name:'赤枝病院',    type:'🏥 医療', loc:'東京都新宿区', email:'watanabe.kyoko@akaedakai.com'},
+    {id:'co2', name:'兼愛会',      type:'🏥 介護', loc:'大阪府',       email:'sato.rie@kenaikai.com'},
+    {id:'co3', name:'シナジー',    type:'🏭 製造', loc:'愛知県',       email:'dao@synergyinc.jp'},
+    {id:'co4', name:'永寿会カリン',type:'🏥 介護', loc:'東京都',       email:'eijyu-y.fujisawa@eijyukai-karin.com'},
+    {id:'co5', name:'一番',        type:'🍽 飲食', loc:'東京都',       email:'info@ichiban.com'},
+    {id:'co6', name:'Zingy',       type:'🍽 飲食', loc:'東京都',       email:'info@zingy.jp'},
+  ],
+  workers: [
+    {id:'w1',  name:'NGUYEN TUAN ANH',  nat:'🇻🇳 ベトナム',   coId:'co1', join:'2025-03-01', visa:'2026-08-01'},
+    {id:'w2',  name:'DONG LAM THAO',    nat:'🇻🇳 ベトナム',   coId:'co2', join:'2024-10-15', visa:'2027-10-01'},
+    {id:'w3',  name:'AKARI KYAW ZIN',   nat:'🇲🇲 ミャンマー', coId:'co5', join:'2025-01-20', visa:'2027-01-01'},
+    {id:'w4',  name:'AHMAD PAJOJAN',    nat:'🇮🇩 インドネシア',coId:'co4', join:'2024-08-01', visa:'2027-08-01'},
+    {id:'w5',  name:'EI THA ZIN PHWAY', nat:'🇲🇲 ミャンマー', coId:'co3', join:'2024-11-01', visa:'2026-11-01'},
+    {id:'w6',  name:'LIN HTET HTET MIN',nat:'🇲🇲 ミャンマー', coId:'co3', join:'2024-08-01', visa:'2026-06-01'},
+    {id:'w7',  name:'WENDIANA NOVELIA', nat:'🇮🇩 インドネシア',coId:'co4', join:'2025-04-01', visa:'2027-03-01'},
+    {id:'w8',  name:'MARIA SANTOS',     nat:'🇵🇭 フィリピン',  coId:'co1', join:'2024-12-01', visa:'2026-12-01'},
+    {id:'w9',  name:'THIDA MON',        nat:'🇲🇲 ミャンマー', coId:'co4', join:'2025-02-01', visa:'2026-06-15'},
+  ],
+  scores: [
+    // format: {id, workerId, month:'2026-05', sleep, work, rel, life, comment}
+    {id:'s1', workerId:'w1', month:'2026-05', sleep:1, work:1, rel:2, life:2, comment:'仕事がとても大変で夜に眠れない日が続いています。職場の先輩とうまくコミュニケーションが取れません。'},
+    {id:'s2', workerId:'w1', month:'2026-04', sleep:3, work:3, rel:3, life:4, comment:''},
+    {id:'s3', workerId:'w2', month:'2026-05', sleep:2, work:1, rel:2, life:3, comment:'今かなり疲れていて、まいっています。仕事量が多すぎます。'},
+    {id:'s4', workerId:'w2', month:'2026-04', sleep:3, work:3, rel:3, life:3, comment:''},
+    {id:'s5', workerId:'w3', month:'2026-05', sleep:5, work:4, rel:4, life:4, comment:''},
+    {id:'s6', workerId:'w4', month:'2026-05', sleep:3, work:3, rel:3, life:3, comment:'最近疲れています。'},
+    {id:'s7', workerId:'w4', month:'2026-04', sleep:2, work:2, rel:2, life:3, comment:''},
+    {id:'s8', workerId:'w5', month:'2026-05', sleep:3, work:2, rel:3, life:3, comment:''},
+    {id:'s9', workerId:'w6', month:'2026-05', sleep:2, work:3, rel:3, life:3, comment:''},
+    {id:'s10',workerId:'w7', month:'2026-05', sleep:4, work:4, rel:4, life:4, comment:''},
+    {id:'s11',workerId:'w8', month:'2026-05', sleep:3, work:3, rel:3, life:5, comment:''},
+    {id:'s12',workerId:'w9', month:'2026-05', sleep:2, work:2, rel:2, life:3, comment:''},
+    {id:'s13',workerId:'w9', month:'2026-04', sleep:3, work:3, rel:3, life:3, comment:''},
+    // historical trend data
+    {id:'h1', workerId:'w1', month:'2026-01', sleep:4, work:4, rel:4, life:4, comment:''},
+    {id:'h2', workerId:'w1', month:'2026-02', sleep:3, work:4, rel:3, life:4, comment:''},
+    {id:'h3', workerId:'w1', month:'2026-03', sleep:3, work:3, rel:3, life:3, comment:''},
+  ],
+  records: [
+    {id:'r1', workerId:'w4', type:'面談',  content:'本人と面談実施。仕事量増加で疲れが強い。シフト見直しを企業に依頼予定。', status:'対応済み', ts:'2026-04-23T09:55'},
+    {id:'r2', workerId:'w2', type:'電話',  content:'本人に連絡、状況確認。来週面談予定。', status:'対応中',  ts:'2026-04-22T18:30'},
+    {id:'r3', workerId:'w2', type:'企業連絡', content:'兼愛会 佐藤様にシフト見直しを依頼。', status:'対応中',  ts:'2026-04-22T10:10'},
+  ]
+};
+
+let _uid = 100;
+const uid = () => 'id' + (++_uid);
+
+// current filter state
+let alertFilter = 'all';
+let workerFilter = 'all';
+let selectedWorkerForInterview = null;
+const TODAY = '2026-05-19';
+const CUR_MONTH = '2026-05';
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+function coName(coId){ return (DB.companies.find(c=>c.id===coId)||{name:'—'}).name }
+function workerName(wId){ return (DB.workers.find(w=>w.id===wId)||{name:'—'}).name }
+
+function latestScore(workerId, month){
+  return DB.scores.filter(s=>s.workerId===workerId && s.month===month)
+                  .sort((a,b)=>b.id.localeCompare(a.id))[0] || null
+}
+
+function totalScore(s){ return s ? s.sleep+s.work+s.rel+s.life : null }
+
+function prevScore(workerId, month){
+  const all = DB.scores.filter(s=>s.workerId===workerId && s.month<month)
+                        .sort((a,b)=>b.month.localeCompare(a.month));
+  return all[0] ? totalScore(all[0]) : null;
+}
+
+function alertLevel(total){
+  if(total===null) return 'none';
+  if(total<=8)  return 'priority';
+  if(total<=13) return 'normal';
+  return 'ok';
+}
+
+function visaStatus(dateStr){
+  if(!dateStr) return {label:'不明', cls:'warn', days:null};
+  const diff = Math.round((new Date(dateStr)-new Date(TODAY))/(1000*60*60*24));
+  if(diff<=30)  return {label:`⛔ ${diff}日後`, cls:'danger', days:diff};
+  if(diff<=90)  return {label:`⚠ ${diff}日後`, cls:'warn',   days:diff};
+  return {label:`✓ ${diff}日後`, cls:'ok', days:diff};
+}
+
+function scoreClass(v, max=5){
+  const pct = v/max;
+  if(pct<=0.4) return 'lo'; if(pct<=0.65) return 'md'; return 'hi';
+}
+
+function totalClass(t){ return alertLevel(t)==='priority'?'r':alertLevel(t)==='normal'?'a':'g' }
+
+function avatarColor(name){
+  const cs=['#e04b4b','#e0844b','#e0bc4b','#69b84e','#4ba8e0','#7e6de0','#d04bca','#e04b7e'];
+  let h=0; for(let c of name) h=(h*31+c.charCodeAt(0))&0xffffffff;
+  return cs[Math.abs(h)%cs.length];
+}
+
+function av(name, size=26){
+  const cl = avatarColor(name);
+  return `<div class="av" style="background:${cl};width:${size}px;height:${size}px;font-size:${Math.round(size*.4)}px">${name[0]}</div>`;
+}
+
+function fmtDate(s){ return s ? s.replace(/-/g,'/') : '—' }
+function fmtMonth(s){ return s ? s.replace('-','年')+'月' : '—' }
+function fmtTs(ts){ return ts ? ts.replace('T',' ') : '—' }
+
+function alertBadge(lvl){
+  if(lvl==='priority') return `<span class="bd bd-r">🔴 優先</span>`;
+  if(lvl==='normal')   return `<span class="bd bd-a">🟡 通常</span>`;
+  if(lvl==='ok')       return `<span class="bd bd-g">✅ なし</span>`;
+  return `<span class="bd bd-s">未回答</span>`;
+}
+
+function statusBadge(st){
+  if(st==='対応済み') return `<span class="bd bd-g">対応済</span>`;
+  if(st==='対応中')   return `<span class="bd bd-t">対応中</span>`;
+  return `<span class="bd bd-s">未対応</span>`;
+}
+
+function deepenBadge(hasDeepen){ return hasDeepen ? `<span class="bd bd-t">回答済</span>` : `<span class="bd bd-s">未実施</span>`; }
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+const pageConfig = {
+  dashboard:  {title:'ダッシュボード', sub:'2026年5月', actions:''},
+  alerts:     {title:'アラート管理',   sub:'', actions:`<button class="btn btn-p btn-sm" onclick="openModal('modal-add-score')">＋ スコア入力</button>`},
+  workers:    {title:'技能者一覧',     sub:'', actions:`<button class="btn btn-p btn-sm" onclick="openModal('modal-add-worker')">＋ 新規登録</button>`},
+  survey:     {title:'アンケート管理', sub:'2026年5月', actions:`<button class="btn btn-p btn-sm" onclick="openModal('modal-add-score')">＋ スコア入力</button>`},
+  interview:  {title:'AI面談ガイド',  sub:'対象者を選択', actions:''},
+  records:    {title:'対応記録',       sub:'', actions:`<button class="btn btn-p btn-sm" onclick="openModal('modal-add-record')">＋ 記録追加</button>`},
+  companies:  {title:'企業別状況',     sub:'', actions:`<button class="btn btn-p btn-sm" onclick="openModal('modal-add-company')">＋ 企業追加</button>`},
+};
+
+function nav(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  document.getElementById('view-'+id).classList.add('on');
+  document.querySelector(`.ni[data-v="${id}"]`).classList.add('on');
+  const cfg = pageConfig[id]||{title:id,sub:'',actions:''};
+  document.getElementById('tb-title').textContent = cfg.title;
+  document.getElementById('tb-sub').textContent = cfg.sub ? ` — ${cfg.sub}` : '';
+  document.getElementById('tb-actions').innerHTML = cfg.actions;
+  renderPage(id);
+}
+
+// ══════════════════════════════════════
+//  RENDER DISPATCH
+// ══════════════════════════════════════
+function renderPage(id){
+  if(id==='dashboard')  renderDashboard();
+  if(id==='alerts')     renderAlerts();
+  if(id==='workers')    renderWorkers();
+  if(id==='survey')     renderSurvey();
+  if(id==='interview')  renderInterviewPage();
+  if(id==='records')    renderRecords();
+  if(id==='companies')  renderCompanies();
+  updateBadges();
+}
+
+// ══════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════
+function renderDashboard(){
+  const scored = DB.workers.map(w=>{
+    const s = latestScore(w.id, CUR_MONTH);
+    const t = totalScore(s);
+    return {w, s, t, lvl: alertLevel(t)};
+  });
+  const priority = scored.filter(x=>x.lvl==='priority').length;
+  const normal   = scored.filter(x=>x.lvl==='normal').length;
+  const answered = scored.filter(x=>x.s).length;
+  const rate     = Math.round(answered/DB.workers.length*100);
+  const avgScore = scored.filter(x=>x.t).reduce((a,c)=>a+c.t,0)/(scored.filter(x=>x.t).length||1);
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi red"><div class="kpi-lbl">⚠️ 要対応アラート</div><div class="kpi-val red">${priority}</div><div class="kpi-ch">優先 ${priority}件 / 通常 ${normal}件</div></div>
+    <div class="kpi am"><div class="kpi-lbl">📋 アンケート回答率</div><div class="kpi-val am">${rate}%</div><div class="kpi-ch">${answered}名 / ${DB.workers.length}名 回答済</div></div>
+    <div class="kpi teal"><div class="kpi-lbl">👥 管理中の技能者</div><div class="kpi-val">${DB.workers.length}</div><div class="kpi-ch">${DB.companies.length}社に配属</div></div>
+    <div class="kpi gr"><div class="kpi-lbl">📈 平均スコア</div><div class="kpi-val gr">${avgScore.toFixed(1)}</div><div class="kpi-ch">/ 20点</div></div>
+  `;
+
+  // Priority list
+  const alerts = scored.filter(x=>x.lvl==='priority'||x.lvl==='normal').sort((a,b)=>(a.t||99)-(b.t||99)).slice(0,6);
+  if(alerts.length===0){
+    document.getElementById('dash-alert-list').innerHTML = `<div class="empty"><div class="empty-ic">🎉</div><div class="empty-t">要対応アラートはありません</div></div>`;
+  } else {
+    let html = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>対象者</th><th>企業</th><th>スコア</th><th>先月比</th><th>状況</th><th></th></tr></thead><tbody>`;
+    alerts.forEach(({w,s,t,lvl})=>{
+      const prev = prevScore(w.id, CUR_MONTH);
+      const diff = (t!==null && prev!==null) ? t - prev : null;
+      const diffTxt = diff!==null ? (diff>0?`<span class="c-g">+${diff}</span>`:`<span class="c-r">${diff}</span>`) : '—';
+      const tc = scoreClass(t||0, 20);
+      const recs = DB.records.filter(r=>r.workerId===w.id);
+      const lastStatus = recs.length ? recs.sort((a,b)=>b.ts.localeCompare(a.ts))[0].status : '未対応';
+      html += `<tr class="dr" onclick="openWorkerDetail('${w.id}')">
+        <td><div class="pc">${av(w.name)}<div><div class="pn">${w.name}</div><div class="ps">${w.nat}</div></div></div></td>
+        <td class="fs12 c-s">${coName(w.coId)}</td>
+        <td><div class="sb-wrap"><div class="sb-track"><div class="sb-fill ${tc}" style="width:${Math.round((t||0)/20*100)}%"></div></div><span class="sb-txt ${tc}">${t!==null?t+'':'—'}/20</span></div></td>
+        <td>${diffTxt}</td>
+        <td>${statusBadge(lastStatus)}</td>
+        <td><button class="btn btn-o btn-sm" onclick="event.stopPropagation();openModal('modal-add-record')">記録</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('dash-alert-list').innerHTML = html;
+  }
+
+  // Donut
+  const circumf = 2*Math.PI*26;
+  const pArc = (priority/(priority+normal+1||1))*circumf*0.7;
+  const nArc = (normal/(priority+normal+1||1))*circumf*0.7;
+  const okArc= circumf*0.15;
+  document.getElementById('d-p').setAttribute('stroke-dasharray', `${pArc} ${circumf-pArc}`);
+  document.getElementById('d-n').setAttribute('stroke-dasharray', `${nArc} ${circumf-nArc}`);
+  document.getElementById('d-n').setAttribute('stroke-dashoffset', `${-pArc}`);
+  document.getElementById('d-ok').setAttribute('stroke-dasharray', `${okArc} ${circumf-okArc}`);
+  document.getElementById('d-ok').setAttribute('stroke-dashoffset', `${-(pArc+nArc)}`);
+  document.getElementById('d-total').textContent = (priority+normal)+'件';
+  document.getElementById('leg-p').textContent = priority;
+  document.getElementById('leg-n').textContent = normal;
+  document.getElementById('leg-ok').textContent = DB.records.filter(r=>r.status==='対応済み').length;
+
+  // Category panel
+  const cats = [
+    {label:'💼 仕事・待遇', sum: scored.filter(x=>x.s).reduce((a,c)=>a+(5-c.s.work),0)},
+    {label:'🤝 コミュニケーション', sum: scored.filter(x=>x.s).reduce((a,c)=>a+(5-c.s.rel),0)},
+    {label:'😴 睡眠・健康', sum: scored.filter(x=>x.s).reduce((a,c)=>a+(5-c.s.sleep),0)},
+    {label:'🏠 生活環境', sum: scored.filter(x=>x.s).reduce((a,c)=>a+(5-c.s.life),0)},
+  ].sort((a,b)=>b.sum-a.sum);
+  const maxSum = cats[0].sum||1;
+  document.getElementById('category-panel').innerHTML = cats.map(c=>`
+    <div class="mb8">
+      <div class="flex ai jb mb4"><span class="fs12">${c.label}</span><span class="fs11 fw7 ${c.sum/maxSum>.6?'c-r':c.sum/maxSum>.3?'c-a':'c-g'}">${c.sum/maxSum>.6?'高':c.sum/maxSum>.3?'中':'低'}</span></div>
+      <div class="sb-track"><div class="sb-fill ${c.sum/maxSum>.6?'lo':c.sum/maxSum>.3?'md':'hi'}" style="width:${Math.round(c.sum/maxSum*100)}%"></div></div>
+    </div>`).join('');
+
+  // Trend chart
+  const months = ['2026-01','2026-02','2026-03','2026-04','2026-05'];
+  const labels = ['1月','2月','3月','4月','5月'];
+  const avgs = months.map(m=>{
+    const ss = DB.scores.filter(s=>s.month===m);
+    if(!ss.length) return 0;
+    return ss.reduce((a,c)=>a+totalScore(c),0)/ss.length;
+  });
+  const maxAvg = Math.max(...avgs,1);
+  document.getElementById('trend-chart').innerHTML = avgs.map((v,i)=>`
+    <div class="bc-it${i===avgs.length-1?' cur':''}">
+      <div class="bc-fill" style="height:${Math.round(v/maxAvg*85)}%"></div>
+      <div class="bc-lbl">${labels[i]}<br><span style="font-size:9px;font-weight:700">${v?v.toFixed(1):''}</span></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  ALERTS
+// ══════════════════════════════════════
+function renderAlerts(){
+  const q = (document.getElementById('alert-search')||{value:''}).value.toLowerCase();
+  const scored = DB.workers.map(w=>{
+    const s = latestScore(w.id, CUR_MONTH);
+    const t = totalScore(s);
+    const lvl = alertLevel(t);
+    return {w, s, t, lvl};
+  });
+
+  let rows = scored.filter(x=>x.lvl!=='ok');
+  if(alertFilter==='priority') rows = rows.filter(x=>x.lvl==='priority');
+  if(alertFilter==='normal')   rows = rows.filter(x=>x.lvl==='normal');
+  if(q) rows = rows.filter(x=>x.w.name.toLowerCase().includes(q)||coName(x.w.coId).toLowerCase().includes(q));
+
+  if(alertFilter==='pending'){
+    const pendingIds = new Set(DB.workers.map(w=>w.id).filter(wid=>{
+      const recs = DB.records.filter(r=>r.workerId===wid);
+      if(!recs.length) return true;
+      return recs.every(r=>r.status!=='対応済み');
+    }));
+    rows = rows.filter(x=>pendingIds.has(x.w.id));
+  }
+
+  rows.sort((a,b)=>(a.t||99)-(b.t||99));
+
+  document.getElementById('alert-count-label').textContent = `${rows.length}件`;
+
+  if(rows.length===0){
+    document.getElementById('alert-tbody').innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-ic">✅</div><div class="empty-t">該当するアラートはありません</div></div></td></tr>`;
+    return;
+  }
+
+  document.getElementById('alert-tbody').innerHTML = rows.map(({w,s,t,lvl})=>{
+    const prev = prevScore(w.id, CUR_MONTH);
+    const diff = (t!==null && prev!==null) ? t-prev : null;
+    const diffTxt = diff!==null ? (diff>0?`<span class="c-g fw7">+${diff}</span>`:`<span class="c-r fw7">${diff}</span>`) : '—';
+    const tc = scoreClass(t||0,20);
+    const recs = DB.records.filter(r=>r.workerId===w.id).sort((a,b)=>b.ts.localeCompare(a.ts));
+    const lastStatus = recs.length ? recs[0].status : '未対応';
+    return `<tr class="dr" onclick="openWorkerDetail('${w.id}')">
+      <td><div class="pc">${av(w.name)}<div><div class="pn">${w.name}</div><div class="ps">${w.nat}</div></div></div></td>
+      <td class="fs12">${coName(w.coId)}</td>
+      <td>${w.nat.split(' ')[0]}</td>
+      <td>${alertBadge(lvl)}</td>
+      <td><div class="sb-wrap"><div class="sb-track"><div class="sb-fill ${tc}" style="width:${Math.round((t||0)/20*100)}%"></div></div><span class="sb-txt ${tc}">${t!==null?t:'-'}/20</span></div></td>
+      <td>${diffTxt}</td>
+      <td>${deepenBadge(s&&s.comment)}</td>
+      <td>${statusBadge(lastStatus)}</td>
+      <td><button class="btn btn-p btn-sm" onclick="event.stopPropagation();openWorkerDetail('${w.id}')">詳細・面談</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterAlert(el, f){
+  alertFilter = f;
+  document.querySelectorAll('#view-alerts .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderAlerts();
+}
+
+// ══════════════════════════════════════
+//  WORKERS
+// ══════════════════════════════════════
+function renderWorkers(){
+  const q = (document.getElementById('worker-search')||{value:''}).value.toLowerCase();
+  let rows = [...DB.workers];
+  if(workerFilter!=='all') rows = rows.filter(w=>w.nat.includes(workerFilter));
+  if(q) rows = rows.filter(w=>w.name.toLowerCase().includes(q)||coName(w.coId).toLowerCase().includes(q)||w.nat.toLowerCase().includes(q));
+
+  const withScore = rows.map(w=>{
+    const s=latestScore(w.id,CUR_MONTH); const t=totalScore(s);
+    return {w,s,t,lvl:alertLevel(t)};
+  });
+
+  // MSR
+  const total=rows.length, ok=withScore.filter(x=>x.lvl==='ok').length,
+        obs=withScore.filter(x=>x.lvl==='normal').length, req=withScore.filter(x=>x.lvl==='priority').length,
+        visaDanger=rows.filter(w=>visaStatus(w.visa).cls==='danger').length;
+  document.getElementById('worker-msr').innerHTML = `
+    <div class="mst"><div class="mst-v">${total}</div><div class="mst-l">管理中</div></div>
+    <div class="mst"><div class="mst-v c-g">${ok}</div><div class="mst-l">良好</div></div>
+    <div class="mst"><div class="mst-v c-a">${obs}</div><div class="mst-l">要観察</div></div>
+    <div class="mst"><div class="mst-v c-r">${req}</div><div class="mst-l">要対応</div></div>
+    <div class="mst"><div class="mst-v c-r">${visaDanger}</div><div class="mst-l">ビザ期限近</div></div>`;
+
+  if(rows.length===0){
+    document.getElementById('worker-tbody').innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-ic">👥</div><div class="empty-t">該当する技能者はいません</div></div></td></tr>`;
+    return;
+  }
+
+  document.getElementById('worker-tbody').innerHTML = withScore.map(({w,s,t,lvl})=>{
+    const prev=prevScore(w.id,CUR_MONTH);
+    const diff=(t!==null&&prev!==null)?t-prev:null;
+    const diffTxt=diff!==null?(diff>0?`<span class="c-g">+${diff}</span>`:`<span class="c-r">${diff}</span>`):'初回';
+    const tc=scoreClass(t||0,20);
+    const vs=visaStatus(w.visa);
+    const lvlBadge = lvl==='priority'?`<span class="bd bd-r">要対応</span>`:lvl==='normal'?`<span class="bd bd-a">要観察</span>`:`<span class="bd bd-g">良好</span>`;
+    return `<tr class="dr" onclick="openWorkerDetail('${w.id}')">
+      <td><div class="pc">${av(w.name)}<div class="pn">${w.name}</div></div></td>
+      <td>${w.nat.split(' ')[0]}</td>
+      <td class="fs12">${coName(w.coId)}</td>
+      <td class="fs12 c-s">${fmtDate(w.join)}</td>
+      <td><span class="vt ${vs.cls}">${vs.label}</span></td>
+      <td>${t!==null?`<div class="sb-wrap"><div class="sb-track"><div class="sb-fill ${tc}" style="width:${Math.round(t/20*100)}%"></div></div><span class="sb-txt ${tc}">${t}/20</span></div>`:'<span class="c-s">未回答</span>'}</td>
+      <td>${diffTxt}</td>
+      <td>${lvlBadge}</td>
+      <td><button class="btn btn-o btn-sm" onclick="event.stopPropagation();openWorkerDetail('${w.id}')">詳細</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterWorker(el, f){
+  workerFilter = f;
+  document.querySelectorAll('#view-workers .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderWorkers();
+}
+
+// ══════════════════════════════════════
+//  SURVEY
+// ══════════════════════════════════════
+function renderSurvey(){
+  const monthScores = DB.scores.filter(s=>s.month===CUR_MONTH);
+  const total=DB.workers.length, answered=new Set(monthScores.map(s=>s.workerId)).size;
+  const rate=Math.round(answered/total*100);
+  const alerts=monthScores.filter(s=>alertLevel(totalScore(s))!=='ok').length;
+  const avg=monthScores.length ? (monthScores.reduce((a,c)=>a+totalScore(c),0)/monthScores.length).toFixed(1) : '—';
+
+  document.getElementById('survey-msr').innerHTML = `
+    <div class="mst"><div class="mst-v">${total}</div><div class="mst-l">配信数</div></div>
+    <div class="mst"><div class="mst-v c-g">${answered}</div><div class="mst-l">回答済</div></div>
+    <div class="mst"><div class="mst-v c-a">${rate}%</div><div class="mst-l">回答率</div></div>
+    <div class="mst"><div class="mst-v c-r">${alerts}</div><div class="mst-l">アラート</div></div>
+    <div class="mst"><div class="mst-v">${avg}</div><div class="mst-l">平均スコア</div></div>`;
+
+  const rows = DB.scores.filter(s=>s.month===CUR_MONTH).sort((a,b)=>totalScore(a)-totalScore(b));
+  document.getElementById('survey-tbody').innerHTML = rows.length ? rows.map(s=>{
+    const w=DB.workers.find(w=>w.id===s.workerId)||{name:'?',coId:'?'};
+    const t=totalScore(s); const lvl=alertLevel(t); const tc=scoreClass(t,20);
+    return `<tr class="dr" onclick="openWorkerDetail('${w.id}')">
+      <td><div class="pc">${av(w.name,22)}<span class="pn">${w.name}</span></div></td>
+      <td class="fs12">${coName(w.coId)}</td>
+      <td class="fs12 c-s">${fmtMonth(s.month)}</td>
+      <td class="${scoreClass(s.sleep)!=='hi'?'c-r':'c-g'}">${s.sleep}</td>
+      <td class="${scoreClass(s.work)!=='hi'?'c-r':'c-g'}">${s.work}</td>
+      <td class="${scoreClass(s.rel)!=='hi'?'c-r':'c-g'}">${s.rel}</td>
+      <td class="${scoreClass(s.life)!=='hi'?'c-r':'c-g'}">${s.life}</td>
+      <td><span class="sb-txt ${tc}">${t}/20</span></td>
+      <td>${alertBadge(lvl)}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="9"><div class="empty"><div class="empty-ic">📋</div><div class="empty-t">スコアデータがありません</div><div class="empty-s">「＋ スコア入力」からデータを追加してください</div></div></td></tr>`;
+
+  // Avg panel
+  const cats=[
+    {key:'sleep',label:'😴 睡眠'},{key:'work',label:'💼 仕事'},
+    {key:'rel',label:'🤝 人間関係'},{key:'life',label:'🏠 生活'}
+  ];
+  document.getElementById('survey-avg-panel').innerHTML = cats.map(c=>{
+    const vals=monthScores.map(s=>s[c.key]);
+    const avg=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
+    const pct=vals.length?Math.round(avg/5*100):0;
+    const tc=scoreClass(parseFloat(avg)||0);
+    return `<div class="mb8">
+      <div class="flex ai jb mb4"><span class="fs12">${c.label}</span><span class="fs12 fw7 ${tc==='lo'?'c-r':tc==='md'?'c-a':'c-g'}">${avg}/5</span></div>
+      <div class="sb-track"><div class="sb-fill ${tc}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+//  INTERVIEW PAGE
+// ══════════════════════════════════════
+function renderInterviewPage(){
+  const sel = document.getElementById('itv-worker-sel');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">-- 選択してください --</option>' +
+    DB.workers.map(w=>`<option value="${w.id}">${w.name}（${coName(w.coId)}）</option>`).join('');
+  if(prev) sel.value = prev;
+  if(selectedWorkerForInterview) { sel.value = selectedWorkerForInterview; selectedWorkerForInterview = null; }
+  renderInterviewGuide();
+}
+
+function renderInterviewGuide(){
+  const wId = document.getElementById('itv-worker-sel').value;
+  if(!wId){ document.getElementById('itv-content').innerHTML = `<div class="empty"><div class="empty-ic">🤝</div><div class="empty-t">対象者を選択すると面談ガイドが表示されます</div></div>`; return; }
+  const w = DB.workers.find(x=>x.id===wId);
+  const s = latestScore(wId, CUR_MONTH);
+  const t = totalScore(s);
+  const lvl = alertLevel(t);
+  if(!s){ document.getElementById('itv-content').innerHTML = `<div class="alert-box am"><strong>⚠️ スコアデータなし</strong><br>${w.name} の今月のアンケート回答がありません。スコートを入力してからご利用ください。</div>`; return; }
+
+  const lowestCat = ['sleep','work','rel','life'].map(k=>({k,v:s[k]})).sort((a,b)=>a.v-b.v)[0];
+  const catLabel = {sleep:'睡眠・健康',work:'仕事・負担',rel:'職場の人間関係',life:'生活環境'}[lowestCat.k];
+
+  const guides = {
+    sleep:[
+      {q:'睡眠の問題はいつ頃から始まりましたか？',      a:s.sleep<=2?'数ヶ月前から':null, next:'仕事や生活の変化でのきっかけを確認。夜勤増加との関連も確認してください。'},
+      {q:'夜勤や残業が増えていませんか？',              a:null, next:'シフト過多が原因の場合、企業担当者に調整を依頼することを検討。'},
+      {q:'睡眠以外の身体的な不調はありますか？',        a:null, next:'体調不良が続く場合は受診を勧めてください。'},
+    ],
+    work:[
+      {q:'業務量や内容について負担を感じていますか？',   a:s.work<=2?'業務が多い':null, next:'業務量・内容の詳細を確認。企業担当者との調整を検討。'},
+      {q:'業務指示が理解できないことはありますか？',     a:null, next:'言語バリアの有無を確認。通訳や日本語サポートの必要性を検討。'},
+      {q:'将来のキャリアについて不安はありますか？',     a:null, next:'特定技能2号・転職等の選択肢について丁寧に説明してください。'},
+    ],
+    rel:[
+      {q:'職場で困っているコミュニケーションはありますか？', a:s.rel<=2?'言葉が難しい':null, next:'具体的な場面を確認。通訳サポートや異文化理解研修を企業に提案。'},
+      {q:'上司や同僚との関係で特に気になることは？',    a:null, next:'ハラスメントの有無も確認。深刻な場合は機関への相談も検討。'},
+      {q:'同国籍の仲間と交流する機会はありますか？',    a:null, next:'孤立防止のコミュニティ活動を提案してください。'},
+    ],
+    life:[
+      {q:'住まいや近隣環境で困っていることはありますか？', a:null, next:'住居トラブルは早期に対処。必要なら住居変更も検討。'},
+      {q:'日常生活（買い物・病院・銀行等）で困っていることは？', a:null, next:'生活ガイダンスの再実施や同行支援を検討。'},
+      {q:'家族や母国との連絡で問題はありますか？',      a:null, next:'帰国ニーズや家族問題がある場合は丁寧に対応してください。'},
+    ],
+  };
+
+  const qs = guides[lowestCat.k] || [];
+
+  let html = `
+    <div class="sg">
+      <div class="sg-it"><div class="sg-lbl">総合</div><div class="sg-val ${totalClass(t)}">${t}/20</div></div>
+      <div class="sg-it"><div class="sg-lbl">😴 睡眠</div><div class="sg-val ${scoreClass(s.sleep)!=='hi'?'r':'g'}">${s.sleep}/5</div></div>
+      <div class="sg-it"><div class="sg-lbl">💼 仕事</div><div class="sg-val ${scoreClass(s.work)!=='hi'?'r':'g'}">${s.work}/5</div></div>
+      <div class="sg-it"><div class="sg-lbl">🤝 人間関係</div><div class="sg-val ${scoreClass(s.rel)!=='hi'?'r':'g'}">${s.rel}/5</div></div>
+      <div class="sg-it"><div class="sg-lbl">🏠 生活</div><div class="sg-val ${scoreClass(s.life)!=='hi'?'r':'g'}">${s.life}/5</div></div>
+    </div>`;
+
+  if(s.comment) html += `<div class="alert-box am"><strong>🗣 本人コメント（AI翻訳）：</strong><br>${s.comment}</div>`;
+
+  html += `<div class="fs12 fw7 mb8" style="color:var(--slate)">🤖 最重要課題：<strong style="color:var(--ink)">${catLabel}</strong>（スコア${lowestCat.v}/5）に関する面談質問</div>`;
+
+  html += qs.map((g,i)=>`
+    <div class="ag-item">
+      <div class="ag-q"><div class="ag-num">${i+1}</div>${g.q}</div>
+      ${g.a?`<div class="ag-a">💬 想定される回答：${g.a}</div>`:''}
+      <div class="ag-next">➡ ${g.next}</div>
+    </div>`).join('');
+
+  const recs = DB.records.filter(r=>r.workerId===wId);
+  const status = recs.length ? recs.sort((a,b)=>b.ts.localeCompare(a.ts))[0].status : '未対応';
+
+  html += `<div class="alert-box t mt12">
+    <strong>✅ 推奨アクション（${w.name}）</strong><br>
+    1. 上記質問を参考に面談を実施してください<br>
+    2. ${coName(w.coId)} 担当者に必要に応じて状況を共有<br>
+    3. 面談後、「対応記録」から内容を保存してください
+  </div>`;
+
+  html += `<div class="flex gap8 mt12">
+    <button class="btn btn-p" onclick="openModal('modal-add-record')">📝 対応記録を作成</button>
+    <button class="btn btn-o" onclick="showToast('PDFを出力しました（デモ）')">📄 PDF出力</button>
+  </div>`;
+
+  document.getElementById('itv-content').innerHTML = html;
+}
+
+function openInterviewFor(){
+  const name = document.getElementById('wd-name').textContent;
+  const w = DB.workers.find(x=>x.name===name);
+  if(w){ selectedWorkerForInterview = w.id; }
+  closeModal('modal-worker-detail');
+  nav('interview');
+}
+
+// ══════════════════════════════════════
+//  RECORDS
+// ══════════════════════════════════════
+function renderRecords(){
+  const sorted = [...DB.records].sort((a,b)=>b.ts.localeCompare(a.ts));
+  document.getElementById('rec-count').textContent = `${sorted.length}件`;
+
+  document.getElementById('rec-tbody').innerHTML = sorted.length ? sorted.map(r=>`
+    <tr>
+      <td class="fs12 c-s">${fmtTs(r.ts)}</td>
+      <td><div class="pc">${av(workerName(r.workerId),22)}<span class="pn fs12">${workerName(r.workerId)}</span></div></td>
+      <td><span class="bd bd-t">${r.type}</span></td>
+      <td class="fs12 c-s" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.content}</td>
+      <td>${statusBadge(r.status)}</td>
+    </tr>`).join('') :
+  `<tr><td colspan="5"><div class="empty"><div class="empty-ic">📝</div><div class="empty-t">対応記録がありません</div><div class="empty-s">「＋ 記録追加」から記録を作成してください</div></div></td></tr>`;
+
+  document.getElementById('rec-timeline').innerHTML = sorted.slice(0,8).map(r=>`
+    <div class="tl-item">
+      <div class="tl-dot">${r.type==='面談'?'🤝':r.type==='電話'?'📞':r.type==='訪問'?'🚶':r.type==='企業連絡'?'🏢':'✉️'}</div>
+      <div class="tl-body">
+        <div class="tl-t">${workerName(r.workerId)} — ${r.type}</div>
+        <div class="tl-d">${r.content}</div>
+        <div class="tl-time">${fmtTs(r.ts)} — 吉田　${statusBadge(r.status)}</div>
+      </div>
+    </div>`).join('') || '<div class="empty"><div class="empty-ic">📋</div><div class="empty-t">記録なし</div></div>';
+}
+
+// ══════════════════════════════════════
+//  COMPANIES
+// ══════════════════════════════════════
+function renderCompanies(){
+  document.getElementById('co-grid').innerHTML = DB.companies.map(co=>{
+    const workers = DB.workers.filter(w=>w.coId===co.id);
+    const scored = workers.map(w=>{ const s=latestScore(w.id,CUR_MONTH); return {s,t:totalScore(s),lvl:alertLevel(totalScore(s))}; });
+    const alerts = scored.filter(x=>x.lvl!=='ok'&&x.t!==null).length;
+    const avg = scored.filter(x=>x.t).length ? (scored.filter(x=>x.t).reduce((a,c)=>a+c.t,0)/scored.filter(x=>x.t).length).toFixed(1) : '—';
+    const hasCritical = scored.some(x=>x.lvl==='priority');
+    const statusLabel = hasCritical ? `<span class="bd bd-r">🔴 要対応</span>` : alerts ? `<span class="bd bd-a">🟡 要観察</span>` : `<span class="bd bd-g">✅ 良好</span>`;
+    return `<div class="co-card${hasCritical?' alert':''}" onclick="showToast('${co.name}の詳細（開発予定）')">
+      <div class="flex ai jb mb4"><div><div class="co-nm">${co.name}</div><div class="co-meta">${co.type} / ${co.loc}</div></div>${statusLabel}</div>
+      <div class="co-stats">
+        <div class="co-st"><div class="co-st-v">${workers.length}</div><div class="co-st-l">技能者数</div></div>
+        <div class="co-st"><div class="co-st-v ${alerts>0?'c-r':'c-g'}">${alerts}</div><div class="co-st-l">アラート</div></div>
+        <div class="co-st"><div class="co-st-v ${parseFloat(avg)<12?'c-r':parseFloat(avg)<15?'c-a':'c-g'}">${avg}</div><div class="co-st-l">平均スコア</div></div>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty" style="grid-column:1/-1"><div class="empty-ic">🏢</div><div class="empty-t">企業が登録されていません</div></div>`;
+}
+
+// ══════════════════════════════════════
+//  WORKER DETAIL MODAL
+// ══════════════════════════════════════
+function openWorkerDetail(wId){
+  const w = DB.workers.find(x=>x.id===wId);
+  if(!w) return;
+  const co = DB.companies.find(c=>c.id===w.coId)||{name:'—'};
+  const s = latestScore(wId, CUR_MONTH);
+  const t = totalScore(s);
+  const vs = visaStatus(w.visa);
+
+  document.getElementById('wd-name').textContent = w.name;
+  document.getElementById('wd-meta').innerHTML = `${w.nat} | ${co.name} | 入社: ${fmtDate(w.join)} | 在留期限: <span class="vt ${vs.cls}">${vs.label}</span>`;
+
+  if(s){
+    document.getElementById('wd-gauge').innerHTML = `
+      <div class="sg-it"><div class="sg-lbl">総合</div><div class="sg-val ${totalClass(t)}">${t}/20</div></div>
+      <div class="sg-it"><div class="sg-lbl">😴 睡眠</div><div class="sg-val ${scoreClass(s.sleep)!=='hi'?'r':'g'}">${s.sleep}/5</div></div>
+      <div class="sg-it"><div class="sg-lbl">💼 仕事</div><div class="sg-val ${scoreClass(s.work)!=='hi'?'r':'g'}">${s.work}/5</div></div>
+      <div class="sg-it"><div class="sg-lbl">🤝 人間関係</div><div class="sg-val ${scoreClass(s.rel)!=='hi'?'r':'g'}">${s.rel}/5</div></div>
+      <div class="sg-it"><div class="sg-lbl">🏠 生活</div><div class="sg-val ${scoreClass(s.life)!=='hi'?'r':'g'}">${s.life}/5</div></div>`;
+    const commentEl = document.getElementById('wd-comment');
+    if(s.comment){ commentEl.style.display='block'; commentEl.innerHTML=`<strong>🗣 本人コメント：</strong><br>${s.comment}`; }
+    else commentEl.style.display='none';
+    const lowest = ['sleep','work','rel','life'].map(k=>({k,v:s[k]})).sort((a,b)=>a.v-b.v)[0];
+    const lowestLabel={sleep:'睡眠',work:'仕事',rel:'人間関係',life:'生活'}[lowest.k];
+    document.getElementById('wd-guide').innerHTML = `<div class="alert-box t"><strong>💡 重点確認事項：</strong>「${lowestLabel}」スコアが${lowest.v}/5と低くなっています。面談ガイドで詳細な質問を確認してください。</div>`;
+  } else {
+    document.getElementById('wd-gauge').innerHTML = `<div class="fs12 c-s">今月のスコートデータがありません</div>`;
+    document.getElementById('wd-comment').style.display='none';
+    document.getElementById('wd-guide').innerHTML='';
+  }
+
+  // Set default worker for record modal
+  openModal('modal-worker-detail');
+}
+
+// ══════════════════════════════════════
+//  CRUD OPERATIONS
+// ══════════════════════════════════════
+function addWorker(){
+  const name = document.getElementById('nw-name').value.trim().toUpperCase();
+  const nat  = document.getElementById('nw-nat').value;
+  const coId = document.getElementById('nw-co').value;
+  const join = document.getElementById('nw-join').value;
+  const visa = document.getElementById('nw-visa').value;
+  if(!name){ showToast('❌ 氏名を入力してください'); return; }
+  if(!coId){ showToast('❌ 企業を選択してください'); return; }
+  DB.workers.push({id:uid(), name, nat, coId, join, visa});
+  closeModal('modal-add-worker');
+  showToast(`✅ ${name} を登録しました`);
+  document.getElementById('nw-name').value='';
+  renderPage('workers');
+}
+
+function addScore(){
+  const wId     = document.getElementById('sc-worker').value;
+  const month   = document.getElementById('sc-month').value;
+  const sleep   = parseInt(document.getElementById('sc-sleep').value)||0;
+  const work    = parseInt(document.getElementById('sc-work').value)||0;
+  const rel     = parseInt(document.getElementById('sc-rel').value)||0;
+  const life    = parseInt(document.getElementById('sc-life').value)||0;
+  const comment = document.getElementById('sc-comment').value.trim();
+  if(!wId)   { showToast('❌ 対象者を選択してください'); return; }
+  if(!month) { showToast('❌ 対象月を選択してください'); return; }
+  if([sleep,work,rel,life].some(v=>v<1||v>5)){ showToast('❌ スコアは1〜5で入力してください'); return; }
+  // upsert
+  const existing = DB.scores.find(s=>s.workerId===wId&&s.month===month);
+  if(existing){ Object.assign(existing,{sleep,work,rel,life,comment}); }
+  else { DB.scores.push({id:uid(),workerId:wId,month,sleep,work,rel,life,comment}); }
+  closeModal('modal-add-score');
+  const wName = workerName(wId);
+  const total = sleep+work+rel+life;
+  const lvl   = alertLevel(total);
+  showToast(`✅ ${wName} のスコア（${total}/20）を保存しました${lvl==='priority'?' — 🔴 優先アラート':lvl==='normal'?' — 🟡 通常アラート':''}`);
+  updateBadges();
+  const curView = document.querySelector('.view.on').id.replace('view-','');
+  renderPage(curView);
+}
+
+function addRecord(){
+  const wId     = document.getElementById('rec-worker').value;
+  const type    = document.getElementById('rec-type').value;
+  const content = document.getElementById('rec-content').value.trim();
+  const status  = document.getElementById('rec-status').value;
+  if(!wId)    { showToast('❌ 対象者を選択してください'); return; }
+  if(!content){ showToast('❌ 対応内容を入力してください'); return; }
+  DB.records.push({id:uid(), workerId:wId, type, content, status, ts: new Date().toISOString().slice(0,16).replace('T','T')});
+  closeModal('modal-add-record');
+  showToast(`✅ ${workerName(wId)} の対応記録を保存しました`);
+  document.getElementById('rec-content').value='';
+  const curView = document.querySelector('.view.on').id.replace('view-','');
+  renderPage(curView);
+}
+
+function addCompany(){
+  const name  = document.getElementById('co-name').value.trim();
+  const type  = document.getElementById('co-type').value;
+  const loc   = document.getElementById('co-loc').value.trim();
+  const email = document.getElementById('co-email').value.trim();
+  if(!name){ showToast('❌ 企業名を入力してください'); return; }
+  DB.companies.push({id:uid(), name, type, loc, email});
+  closeModal('modal-add-company');
+  showToast(`✅ ${name} を追加しました`);
+  document.getElementById('co-name').value='';
+  document.getElementById('co-email').value='';
+  renderPage('companies');
+  populateSelects();
+}
+
+// ══════════════════════════════════════
+//  POPULATE SELECTS
+// ══════════════════════════════════════
+function populateSelects(){
+  const wOpts = DB.workers.map(w=>`<option value="${w.id}">${w.name}（${coName(w.coId)}）</option>`).join('');
+  const coOpts = DB.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  ['sc-worker','rec-worker'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<option value="">選択…</option>'+wOpts; });
+  ['nw-co'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML='<option value="">選択…</option>'+coOpts; });
+  // Set defaults
+  const sm = document.getElementById('sc-month'); if(sm) sm.value = CUR_MONTH;
+}
+
+// ══════════════════════════════════════
+//  BADGES
+// ══════════════════════════════════════
+function updateBadges(){
+  const alertCount = DB.workers.filter(w=>{
+    const s=latestScore(w.id,CUR_MONTH); const lvl=alertLevel(totalScore(s));
+    return lvl==='priority'||lvl==='normal';
+  }).length;
+  document.getElementById('badge-alert').textContent = alertCount;
+
+  const monthScores = DB.scores.filter(s=>s.month===CUR_MONTH);
+  const unanswered = DB.workers.length - new Set(monthScores.map(s=>s.workerId)).size;
+  document.getElementById('badge-survey').textContent = unanswered;
+}
+
+// ══════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════
+function openModal(id){
+  populateSelects();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ══════════════════════════════════════
+//  TABS (generic)
+// ══════════════════════════════════════
+function switchTab(el, group){
+  const bar = el.closest('.tabs');
+  bar.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+let _toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════
+//  SIDEBAR CLICK
+// ══════════════════════════════════════
+document.querySelectorAll('.ni').forEach(ni=>{
+  ni.addEventListener('click',()=>nav(ni.dataset.v));
+});
+
+// ══════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════
+populateSelects();
+renderDashboard();
+updateBadges();
+</script>
+</body>
+</html>
